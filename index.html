@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iskra - Gra do Nauki Japońskiego</title>
+    <title>Poneglyph - Gra do Nauki Japońskiego</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -51,7 +51,7 @@
         
         .kana-btn-wrapper.selected .kana-btn { background-color: var(--accent-primary); color: var(--text-on-accent); transform: scale(1.05); box-shadow: 0 0 15px var(--shadow-color); }
         .theme-btn.active { box-shadow: 0 0 0 3px var(--accent-secondary); transform: scale(1.05); }
-        #logo-iskra { animation: pop-in 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.2s forwards; }
+        #logo { animation: pop-in 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.2s forwards; opacity: 0; transform: scale(0.5) rotate(-15deg); }
         @keyframes pop-in { to { opacity: 1; transform: scale(1) rotate(0deg); } }
         .mastery-indicator { position: absolute; top: 2px; right: 2px; width: 12px; height: 12px; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .segmented-control { position: relative; display: flex; background-color: var(--bg-primary); border-radius: 0.5rem; padding: 0.25rem; }
@@ -65,29 +65,7 @@
         .banner-svg { width: 100%; height: 100%; display: none; }
         .theme-wano #wano-banner, .theme-drum #drum-banner, .theme-sunny #sunny-banner { display: block; }
         
-        /* NOWOŚĆ: Pieczęć Artysty (Hanko) */
-        #hanko-seal {
-            position: fixed;
-            bottom: 1rem;
-            right: 1rem;
-            width: 45px;
-            height: 45px;
-            background-color: #be123c;
-            border: 2px solid #881337;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Mochiy Pop One', sans-serif;
-            color: #fff1f2;
-            font-size: 1.1rem;
-            writing-mode: vertical-rl;
-            text-orientation: mixed;
-            border-radius: 4px;
-            z-index: 1000;
-            opacity: 0.7;
-            transition: opacity 0.3s;
-            cursor: pointer;
-        }
+        #hanko-seal { position: fixed; bottom: 1rem; right: 1rem; width: 45px; height: 45px; background-color: #be123c; border: 2px solid #881337; display: flex; align-items: center; justify-content: center; font-family: 'Mochiy Pop One', sans-serif; color: #fff1f2; font-size: 1.1rem; writing-mode: vertical-rl; text-orientation: mixed; border-radius: 4px; z-index: 1000; opacity: 0.7; transition: opacity 0.3s; cursor: pointer; }
         #hanko-seal:hover { opacity: 1; }
     </style>
 </head>
@@ -122,10 +100,14 @@
             <div id="setup-screen" class="screen">
                 <div class="bg-[var(--bg-secondary)] p-6 sm:p-8 rounded-2xl shadow-2xl bg-opacity-80 backdrop-blur-sm">
                      <div class="flex items-center justify-center gap-3 mb-2">
-                        <svg id="logo-iskra" class="w-10 h-10 text-[var(--accent-secondary)]" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M12,20c-4.41,0-8-3.59-8-8s3.59-8,8-8s8,3.59,8,8 S16.41,20,12,20z"/><path d="M12,5c-3.86,0-7,3.14-7,7h2c0-2.76,2.24-5,5-5s5,2.24,5,5h2C19,8.14,15.86,5,12,5z"/><rect x="8" y="4" width="8" height="2" rx="1"/><path d="M20,12c0,0.55-0.45,1-1,1h-3.35c-0.83,0-1.5-0.67-1.5-1.5V9.34C14.15,8.51,13.15,8,12,8s-2.15,0.51-2.15,1.34V11.5 c0,0.83-0.67,1.5-1.5,1.5H5c-0.55,0-1-0.45-1-1s0.45-1,1-1h3.35C9.18,11,10,10.18,10,9.34V9c0-1.65,1.35-3,3-3s3,1.35,3,3v0.34 c0,0.84,0.82,1.66,1.65,1.66H20C20.55,12,20,11.45,20,12z"/></svg>
-                        <h1 class="text-3xl sm:text-4xl font-bold text-center title-font text-[var(--accent-secondary)]">Iskra</h1>
+                        <!-- NOWY BANER I NAZWA -->
+                        <svg id="logo" class="w-10 h-10 text-[var(--accent-secondary)]" viewBox="0 0 24 24" fill="currentColor">
+                           <rect x="4" y="4" width="16" height="16" rx="2" fill="var(--bg-primary)" stroke="currentColor" stroke-width="1.5" />
+                           <path d="M8 9h8M8 12h8M8 15h4" stroke="var(--text-secondary)" stroke-width="1.5" stroke-linecap="round" />
+                        </svg>
+                        <h1 class="text-3xl sm:text-4xl font-bold text-center title-font text-[var(--accent-secondary)]">Poneglyph</h1>
                     </div>
-                    <p class="text-center text-[var(--text-secondary)] mb-6">Wybierz tryb gry i znaki, które chcesz przećwiczyć.</p>
+                    <p class="text-center text-[var(--text-secondary)] mb-6">Odszyfruj znaki i zostań Królem Wiedzy!</p>
                     <div class="mb-6"><h3 class="text-lg font-bold text-center title-font mb-3">Motyw</h3><div id="theme-switcher" class="flex justify-center gap-2 bg-[var(--bg-primary)] rounded-lg p-2 max-w-xl mx-auto"><button data-theme="wano" class="theme-btn w-1/3 text-center p-2 rounded-md font-semibold transition bg-[var(--bg-tertiary)] hover:opacity-80">Wano</button><button data-theme="drum" class="theme-btn w-1/3 text-center p-2 rounded-md font-semibold transition bg-[var(--bg-tertiary)] hover:opacity-80">Królestwo Drum</button><button data-theme="sunny" class="theme-btn w-1/3 text-center p-2 rounded-md font-semibold transition bg-[var(--bg-tertiary)] hover:opacity-80">Thousand Sunny</button></div></div>
                     <div class="mb-6">
                         <h3 class="text-lg font-bold text-center title-font mb-3">Tryb Gry</h3>
@@ -183,7 +165,6 @@
         </div>
     </div>
     
-    <!-- NOWOŚĆ: Dodany element pieczęci -->
     <div id="hanko-seal" title="Stworzone z Iskrą">火花</div>
 
     <script>
