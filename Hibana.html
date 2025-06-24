@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iskra - Gra do Nauki Japońskiego</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Inter:wght@400;600;700&family=Mochiy+Pop+One&display=swap" rel="stylesheet">
+    <style>
+        :root { --shadow-color: rgba(79, 70, 229, 0.5); }
+        .theme-wano {
+            --bg-primary: #1a1a2e; --bg-secondary: #16213e; --bg-tertiary: #0f3460; --bg-interactive: #533483;
+            --text-primary: #e94560; --text-secondary: #e94560; --text-on-accent: #ffffff;
+            --accent-primary: #e94560; --accent-primary-hover: #c73049; --accent-secondary: #f07489;
+            --accent-katakana: #16c79a; --accent-yoon: #f9d923;
+            --feedback-correct: #4ade80; --feedback-wrong: #f87171; --shadow-color: rgba(233, 69, 96, 0.5);
+            --mastery-lvl1: #a16207; --mastery-lvl2: #a16207; --mastery-lvl3: #a3a3a3; --mastery-lvl4: #d4d4d4; --mastery-lvl5: #fde047; --mastery-border: #fde047;
+            --progress-bar-perfect: #22c55e; --progress-bar-good: #facc15; --progress-bar-bad: #ef4444;
+        }
+        .theme-drum {
+            --bg-primary: #e0f2fe; --bg-secondary: #f0f9ff; --bg-tertiary: #bae6fd; --bg-interactive: #7dd3fc;
+            --text-primary: #075985; --text-secondary: #0c4a6e; --text-on-accent: #ffffff;
+            --accent-primary: #ec4899; --accent-primary-hover: #db2777; --accent-secondary: #f9a8d4;
+            --accent-katakana: #059669; --accent-yoon: #ea580c;
+            --feedback-correct: #16a34a; --feedback-wrong: #dc2626; --shadow-color: rgba(236, 72, 153, 0.4);
+            --mastery-lvl1: #a16207; --mastery-lvl2: #a16207; --mastery-lvl3: #a8a29e; --mastery-lvl4: #d6d3d1; --mastery-lvl5: #fde047; --mastery-border: #fde047;
+            --progress-bar-perfect: #16a34a; --progress-bar-good: #f59e0b; --progress-bar-bad: #b91c1c;
+        }
+        .theme-sunny {
+            --bg-primary: #fef3c7; --bg-secondary: #fef9c3; --bg-tertiary: #fde68a; --bg-interactive: #fcd34d;
+            --text-primary: #78350f; --text-secondary: #92400e; --text-on-accent: #451a03;
+            --accent-primary: #f97316; --accent-primary-hover: #ea580c; --accent-secondary: #fb923c;
+            --accent-katakana: #15803d; --accent-yoon: #be123c;
+            --feedback-correct: #16a34a; --feedback-wrong: #b91c1c; --shadow-color: rgba(249, 115, 22, 0.4);
+            --mastery-lvl1: #a16207; --mastery-lvl2: #a16207; --mastery-lvl3: #a3a3a3; --mastery-lvl4: #d4d4d4; --mastery-lvl5: #fde047; --mastery-border: #fde047;
+            --progress-bar-perfect: #16a34a; --progress-bar-good: #d97706; --progress-bar-bad: #dc2626;
+        }
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; transition: background-color 0.3s ease; }
+        #background-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
+        .main-container { position: relative; z-index: 1; perspective: 1000px; width: 100%; }
+        .kana-font { font-family: 'Mochiy+Pop+One', sans-serif; }
+        .title-font { font-family: 'IM Fell English SC', serif; }
+        
+        #screens-wrapper { position: relative; transition: height 0.5s cubic-bezier(0.25, 1, 0.5, 1); }
+        .screen { transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.5s ease; width: 100%; position: absolute; backface-visibility: hidden; top: 0; }
+        .screen.hidden.left { opacity: 0; transform: translateX(-100%) rotateY(20deg); pointer-events: none; }
+        .screen.hidden.right { opacity: 0; transform: translateX(100%) rotateY(-20deg); pointer-events: none; }
+        
+        .kana-btn-wrapper.selected .kana-btn { background-color: var(--accent-primary); color: var(--text-on-accent); transform: scale(1.05); box-shadow: 0 0 15px var(--shadow-color); }
+        .theme-btn.active { box-shadow: 0 0 0 3px var(--accent-secondary); transform: scale(1.05); }
+        #logo-iskra { animation: pop-in 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.2s forwards; }
+        @keyframes pop-in { to { opacity: 1; transform: scale(1) rotate(0deg); } }
+        .mastery-indicator { position: absolute; top: 2px; right: 2px; width: 12px; height: 12px; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .segmented-control { position: relative; display: flex; background-color: var(--bg-primary); border-radius: 0.5rem; padding: 0.25rem; }
+        .segmented-control-slider { position: absolute; top: 0.25rem; bottom: 0.25rem; background-color: var(--accent-primary); border-radius: 0.375rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1); }
+        .segmented-control-label { position: relative; z-index: 10; flex: 1 1 0%; text-align: center; padding: 0.5rem; font-weight: 600; cursor: pointer; transition: color 0.3s ease; }
+        .segmented-control input:checked + label { color: var(--text-on-accent); }
+        .segmented-control-label .tooltip { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background-color: var(--bg-secondary); color: var(--text-primary); padding: 0.5rem 0.75rem; border-radius: 0.375rem; font-size: 0.8rem; font-weight: 600; white-space: nowrap; z-index: 20; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.2s ease, transform 0.2s ease; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .segmented-control-label:hover .tooltip { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(-4px); }
+        .segmented-control-label .icon { width: 1.5em; height: 1.5em; stroke-width: 2; vertical-align: middle; }
+        #theme-banner { height: 150px; margin-bottom: 1rem; transition: opacity 0.5s ease; position: relative; z-index: 1;}
+        .banner-svg { width: 100%; height: 100%; display: none; }
+        .theme-wano #wano-banner, .theme-drum #drum-banner, .theme-sunny #sunny-banner { display: block; }
+        
+        /* NOWOŚĆ: Pieczęć Artysty (Hanko) */
+        #hanko-seal {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            width: 45px;
+            height: 45px;
+            background-color: #be123c;
+            border: 2px solid #881337;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Mochiy Pop One', sans-serif;
+            color: #fff1f2;
+            font-size: 1.1rem;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            border-radius: 4px;
+            z-index: 1000;
+            opacity: 0.7;
+            transition: opacity 0.3s;
+            cursor: pointer;
+        }
+        #hanko-seal:hover { opacity: 1; }
+    </style>
+</head>
+<body class="bg-[var(--bg-primary)] text-[var(--text-primary)] flex justify-center items-start p-4 sm:p-8">
+
+    <canvas id="background-canvas"></canvas>
+
+    <div class="main-container max-w-3xl mx-auto w-full">
+        <div id="theme-banner">
+            <svg id="wano-banner" class="banner-svg" viewBox="0 0 300 100" preserveAspectRatio="xMidYMid slice">
+                <circle cx="220" cy="40" r="30" fill="#e94560" opacity="0.8"/>
+                <path d="M0 100 C 40 80, 60 110, 100 90 L 300 90 L 300 100 Z" fill="var(--bg-secondary)" opacity="0.6"/>
+                <path d="M80 90 L 85 70 L 90 90 Z" fill="var(--bg-primary)"/>
+                <path d="M90 75 L 80 75 L 85 65 Z" fill="var(--bg-primary)"/>
+                <path d="M95 90 L 100 80 L 105 90 Z" fill="var(--bg-primary)"/>
+            </svg>
+            <svg id="drum-banner" class="banner-svg" viewBox="0 0 300 100" preserveAspectRatio="xMidYMid slice">
+                <path d="M-10 100 L 50 40 L 80 70 L 120 20 L 160 80 L 220 50 L 250 80 L 310 30 L 310 100 Z" fill="var(--bg-tertiary)" />
+                <path d="M-10 100 L 40 50 L 70 75 L 110 30 L 150 85 L 210 60 L 240 85 L 310 40 L 310 100 Z" fill="var(--bg-secondary)" opacity="0.7"/>
+            </svg>
+             <svg id="sunny-banner" class="banner-svg" viewBox="0 0 300 100" preserveAspectRatio="xMidYMid slice">
+                <circle cx="40" cy="40" r="15" fill="#f97316" opacity="0.8"/>
+                <path d="M0 80 C 100 70, 200 90, 300 80 L 300 100 L 0 100 Z" fill="#92400e" opacity="0.5"/>
+                <line x1="0" y1="85" x2="300" y2="85" stroke="var(--text-primary)" stroke-width="2"/>
+                <line x1="50" y1="85" x2="50" y2="100" stroke="var(--text-primary)" stroke-width="2"/>
+                <line x1="150" y1="85" x2="150" y2="100" stroke="var(--text-primary)" stroke-width="2"/>
+                <line x1="250" y1="85" x2="250" y2="100" stroke="var(--text-primary)" stroke-width="2"/>
+            </svg>
+        </div>
+
+        <div id="screens-wrapper">
+            <div id="setup-screen" class="screen">
+                <div class="bg-[var(--bg-secondary)] p-6 sm:p-8 rounded-2xl shadow-2xl bg-opacity-80 backdrop-blur-sm">
+                     <div class="flex items-center justify-center gap-3 mb-2">
+                        <svg id="logo-iskra" class="w-10 h-10 text-[var(--accent-secondary)]" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M12,20c-4.41,0-8-3.59-8-8s3.59-8,8-8s8,3.59,8,8 S16.41,20,12,20z"/><path d="M12,5c-3.86,0-7,3.14-7,7h2c0-2.76,2.24-5,5-5s5,2.24,5,5h2C19,8.14,15.86,5,12,5z"/><rect x="8" y="4" width="8" height="2" rx="1"/><path d="M20,12c0,0.55-0.45,1-1,1h-3.35c-0.83,0-1.5-0.67-1.5-1.5V9.34C14.15,8.51,13.15,8,12,8s-2.15,0.51-2.15,1.34V11.5 c0,0.83-0.67,1.5-1.5,1.5H5c-0.55,0-1-0.45-1-1s0.45-1,1-1h3.35C9.18,11,10,10.18,10,9.34V9c0-1.65,1.35-3,3-3s3,1.35,3,3v0.34 c0,0.84,0.82,1.66,1.65,1.66H20C20.55,12,20,11.45,20,12z"/></svg>
+                        <h1 class="text-3xl sm:text-4xl font-bold text-center title-font text-[var(--accent-secondary)]">Iskra</h1>
+                    </div>
+                    <p class="text-center text-[var(--text-secondary)] mb-6">Wybierz tryb gry i znaki, które chcesz przećwiczyć.</p>
+                    <div class="mb-6"><h3 class="text-lg font-bold text-center title-font mb-3">Motyw</h3><div id="theme-switcher" class="flex justify-center gap-2 bg-[var(--bg-primary)] rounded-lg p-2 max-w-xl mx-auto"><button data-theme="wano" class="theme-btn w-1/3 text-center p-2 rounded-md font-semibold transition bg-[var(--bg-tertiary)] hover:opacity-80">Wano</button><button data-theme="drum" class="theme-btn w-1/3 text-center p-2 rounded-md font-semibold transition bg-[var(--bg-tertiary)] hover:opacity-80">Królestwo Drum</button><button data-theme="sunny" class="theme-btn w-1/3 text-center p-2 rounded-md font-semibold transition bg-[var(--bg-tertiary)] hover:opacity-80">Thousand Sunny</button></div></div>
+                    <div class="mb-6">
+                        <h3 class="text-lg font-bold text-center title-font mb-3">Tryb Gry</h3>
+                        <div id="game-mode-selector" class="segmented-control max-w-xl mx-auto">
+                            <div id="game-mode-slider" class="segmented-control-slider"></div>
+                            <input type="radio" id="mode-classic" name="game-mode" value="classic" class="hidden" checked>
+                            <label for="mode-classic" class="segmented-control-label">
+                                <span class="tooltip">Zobacz znak, wybierz wymowę</span>
+                                <div class="flex items-center justify-center gap-2">
+                                    <svg class="icon" fill="currentColor" viewBox="0 0 24 24"><text x="50%" y="7" dominant-baseline="middle" text-anchor="middle" font-size="10" class="kana-font">あ</text><path stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M12 10v4m0 0l-1.5-1.5m1.5 1.5l1.5-1.5"></path><text x="50%" y="21" dominant-baseline="middle" text-anchor="middle" font-size="10" font-weight="bold">A</text></svg>
+                                    <span class="hidden sm:inline">Klasyczny</span>
+                                </div>
+                            </label>
+                            <input type="radio" id="mode-reverse" name="game-mode" value="reverse" class="hidden">
+                            <label for="mode-reverse" class="segmented-control-label">
+                                 <span class="tooltip">Zobacz wymowę, wybierz znak</span>
+                                <div class="flex items-center justify-center gap-2">
+                                    <svg class="icon" fill="currentColor" viewBox="0 0 24 24"><text x="50%" y="7" dominant-baseline="middle" text-anchor="middle" font-size="10" font-weight="bold">A</text><path stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M12 10v4m0 0l-1.5-1.5m1.5 1.5l1.5-1.5"></path><text x="50%" y="21" dominant-baseline="middle" text-anchor="middle" font-size="10" class="kana-font">あ</text></svg>
+                                    <span class="hidden sm:inline">Odwrotny</span>
+                                </div>
+                            </label>
+                            <input type="radio" id="mode-typing" name="game-mode" value="typing" class="hidden">
+                            <label for="mode-typing" class="segmented-control-label">
+                                 <span class="tooltip">Zobacz znak, wpisz wymowę</span>
+                                 <div class="flex items-center justify-center gap-2">
+                                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-2M8 5a2 2 0 002 2h4a2 2 0 002-2M8 5a2 2 0 012-2h4a2 2 0 012 2m-8 5h.01M12 10h.01M16 10h.01M9 16H8m4 0h.01M16 16h-2" /></svg>
+                                    <span class="hidden sm:inline">Pisanie</span>
+                                </div>
+                            </label>
+                            <input type="radio" id="mode-challenge" name="game-mode" value="challenge" class="hidden">
+                            <label for="mode-challenge" class="segmented-control-label">
+                                 <span class="tooltip">Mieszanka wszystkich trybów</span>
+                                 <div class="flex items-center justify-center gap-2">
+                                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                    <span class="hidden sm:inline">Wyzwanie</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center border-b border-[var(--bg-tertiary)] mt-6 mb-4"><button id="tab-hiragana" class="flex-1 p-3 font-semibold transition">Hiragana</button><button id="tab-katakana" class="flex-1 p-3 font-semibold transition">Katakana</button><button id="tab-yoon" class="flex-1 p-3 font-semibold transition">Yōon</button></div>
+                    <div id="kana-selection-container" class="space-y-6">
+                        <div id="hiragana-grid" class="hidden"><div class="flex justify-between items-center mb-3"><h3 class="text-xl font-bold title-font text-[var(--accent-secondary)]">Hiragana (ひらがな)</h3><div><button onclick="toggleAll('hiragana', true)" class="text-xs bg-[var(--bg-interactive)] hover:opacity-80 px-2 py-1 rounded-md">Wszystkie</button><button onclick="toggleAll('hiragana', false)" class="text-xs bg-[var(--bg-interactive)] hover:opacity-80 px-2 py-1 rounded-md ml-2">Żadne</button></div></div><div id="hiragana-chars" class="grid grid-cols-5 sm:grid-cols-10 gap-2"></div></div>
+                        <div id="katakana-grid" class="hidden"><div class="flex justify-between items-center mb-3"><h3 class="text-xl font-bold title-font text-[var(--accent-katakana)]">Katakana (カタカナ)</h3><div><button onclick="toggleAll('katakana', true)" class="text-xs bg-[var(--bg-interactive)] hover:opacity-80 px-2 py-1 rounded-md">Wszystkie</button><button onclick="toggleAll('katakana', false)" class="text-xs bg-[var(--bg-interactive)] hover:opacity-80 px-2 py-1 rounded-md ml-2">Żadne</button></div></div><div id="katakana-chars" class="grid grid-cols-5 sm:grid-cols-10 gap-2"></div></div>
+                        <div id="yoon-grid" class="hidden"><div class="flex justify-between items-center mb-3"><h3 class="text-xl font-bold title-font text-[var(--accent-yoon)]">Yōon (拗音)</h3><div><button onclick="toggleAll('yoon', true)" class="text-xs bg-[var(--bg-interactive)] hover:opacity-80 px-2 py-1 rounded-md">Wszystkie</button><button onclick="toggleAll('yoon', false)" class="text-xs bg-[var(--bg-interactive)] hover:opacity-80 px-2 py-1 rounded-md ml-2">Żadne</button></div></div><div id="yoon-chars" class="grid grid-cols-3 sm:grid-cols-6 gap-2"></div></div>
+                    </div>
+                    <p id="setup-message" class="text-[var(--feedback-wrong)] text-center h-6 mt-4 font-semibold"></p>
+                    <div class="mt-2 text-center"><button id="start-game-btn" class="w-full sm:w-auto bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--text-on-accent)] font-bold py-3 px-12 rounded-lg text-lg transition-transform hover:scale-105 shadow-lg">Rozpocznij Grę</button></div>
+                </div>
+            </div>
+
+            <div id="game-screen" class="screen hidden"><div class="bg-[var(--bg-secondary)] bg-opacity-80 backdrop-blur-sm p-6 sm:p-8 rounded-2xl shadow-2xl text-center"><div id="don-effect-container"></div><div class="flex justify-between items-center mb-6"><div id="progress-text" class="text-lg font-semibold whitespace-nowrap mr-4">Pytanie: 1 / 10</div><div class="w-full bg-[var(--bg-tertiary)] rounded-full h-4"><div id="progress-bar" class="h-4 rounded-full transition-all duration-300"></div></div><div id="score" class="ml-4 text-lg font-semibold whitespace-nowrap">Wynik: 0</div></div><div class="bg-[var(--bg-primary)] bg-opacity-80 backdrop-blur-sm rounded-lg p-8 my-6 flex items-center justify-center" style="min-height: 200px;"><p id="question-display" class="kana-font text-8xl sm:text-9xl"></p></div><div id="feedback" class="h-8 mb-4 text-xl font-bold"></div><div id="answer-options" class="grid grid-cols-2 gap-4"></div><div id="typing-container" class="hidden"><input type="text" id="typing-input" placeholder="Wpisz romaji i naciśnij Enter" class="w-full text-center text-xl p-3 rounded-lg bg-[var(--bg-secondary)] border-2 border-[var(--bg-interactive)] focus:outline-none focus:border-[var(--accent-primary)]"></div><button id="quit-game-btn" class="mt-8 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg transition-transform hover:scale-105">Zakończ</button></div></div>
+            
+            <div id="results-screen" class="screen hidden"><div class="bg-[var(--bg-secondary)] bg-opacity-80 backdrop-blur-sm p-8 rounded-2xl shadow-2xl text-center"><h2 class="text-3xl font-bold mb-4 title-font text-[var(--accent-secondary)]">Koniec Gry!</h2><p class="text-xl mb-2">Twój wynik końcowy:</p><p id="final-score" class="text-5xl font-bold text-[var(--feedback-correct)] mb-8">18 / 20</p><div id="detailed-stats" class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left mb-8 p-4 bg-[var(--bg-primary)] rounded-lg"><div class="stat-item"><strong>Średni czas odpowiedzi:</strong><span id="avg-time" class="ml-2 font-bold"></span></div><div class="stat-item"><strong>Twój Nemezis:</strong><span id="nemesis-kana" class="ml-2 font-bold kana-font"></span></div></div><div id="mistakes-container" class="mb-8"><h3 class="text-xl font-semibold mb-3 title-font">Znaki do powtórki:</h3><div id="mistakes-list" class="flex flex-wrap justify-center gap-3 text-lg"></div></div><button id="play-again-btn" class="w-full sm:w-auto bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--text-on-accent)] font-bold py-3 px-12 rounded-lg text-lg transition-transform hover:scale-105 shadow-lg">Zagraj Ponownie</button></div></div>
+        </div>
+    </div>
+    
+    <!-- NOWOŚĆ: Dodany element pieczęci -->
+    <div id="hanko-seal" title="Stworzone z Iskrą">火花</div>
+
+    <script>
+        const KANA_DATA = { hiragana: [{ kana: 'あ', romaji: 'a' }, { kana: 'い', romaji: 'i' }, { kana: 'う', romaji: 'u' }, { kana: 'え', romaji: 'e' }, { kana: 'お', romaji: 'o' },{ kana: 'か', romaji: 'ka' }, { kana: 'き', romaji: 'ki' }, { kana: 'く', romaji: 'ku' }, { kana: 'け', romaji: 'ke' }, { kana: 'こ', romaji: 'ko' },{ kana: 'さ', romaji: 'sa' }, { kana: 'し', romaji: 'shi' }, { kana: 'す', romaji: 'su' }, { kana: 'せ', romaji: 'se' }, { kana: 'そ', romaji: 'so' },{ kana: 'た', romaji: 'ta' }, { kana: 'ち', romaji: 'chi' }, { kana: 'つ', romaji: 'tsu' }, { kana: 'て', romaji: 'te' }, { kana: 'と', romaji: 'to' },{ kana: 'な', romaji: 'na' }, { kana: 'に', romaji: 'ni' }, { kana: 'ぬ', romaji: 'nu' }, { kana: 'ね', romaji: 'ne' }, { kana: 'の', romaji: 'no' },{ kana: 'は', romaji: 'ha' }, { kana: 'ひ', romaji: 'hi' }, { kana: 'ふ', romaji: 'fu' }, { kana: 'へ', romaji: 'he' }, { kana: 'ほ', romaji: 'ho' },{ kana: 'ま', romaji: 'ma' }, { kana: 'み', romaji: 'mi' }, { kana: 'む', romaji: 'mu' }, { kana: 'め', romaji: 'me' }, { kana: 'も', romaji: 'mo' },{ kana: 'や', romaji: 'ya' }, { kana: 'ゆ', romaji: 'yu' }, { kana: 'よ', romaji: 'yo' },{ kana: 'ら', romaji: 'ra' }, { kana: 'り', romaji: 'ri' }, { kana: 'る', romaji: 'ru' }, { kana: 'れ', romaji: 're' }, { kana: 'ろ', romaji: 'ro' },{ kana: 'わ', romaji: 'wa' }, { kana: 'を', romaji: 'wo' }, { kana: 'ん', romaji: 'n' },{ kana: 'が', romaji: 'ga' }, { kana: 'ぎ', romaji: 'gi' }, { kana: 'ぐ', romaji: 'gu' }, { kana: 'げ', romaji: 'ge' }, { kana: 'ご', romaji: 'go' },{ kana: 'ざ', romaji: 'za' }, { kana: 'じ', romaji: 'ji' }, { kana: 'ず', romaji: 'zu' }, { kana: 'ぜ', romaji: 'ze' }, { kana: 'ぞ', romaji: 'zo' },{ kana: 'だ', romaji: 'da' }, { kana: 'ぢ', romaji: 'ji' }, { kana: 'づ', romaji: 'zu' }, { kana: 'で', romaji: 'de' }, { kana: 'ど', romaji: 'do' },{ kana: 'ば', romaji: 'ba' }, { kana: 'び', romaji: 'bi' }, { kana: 'ぶ', romaji: 'bu' }, { kana: 'べ', romaji: 'be' }, { kana: 'ぼ', romaji: 'bo' },{ kana: 'ぱ', romaji: 'pa' }, { kana: 'ぴ', romaji: 'pi' }, { kana: 'ぷ', romaji: 'pu' }, { kana: 'ぺ', romaji: 'pe' }, { kana: 'ぽ', romaji: 'po' }], katakana: [{ kana: 'ア', romaji: 'a' }, { kana: 'イ', romaji: 'i' }, { kana: 'ウ', romaji: 'u' }, { kana: 'エ', romaji: 'e' }, { kana: 'オ', romaji: 'o' },{ kana: 'カ', romaji: 'ka' }, { kana: 'キ', romaji: 'ki' }, { kana: 'ク', romaji: 'ku' }, { kana: 'ケ', romaji: 'ke' }, { kana: 'コ', romaji: 'ko' },{ kana: 'サ', romaji: 'sa' }, { kana: 'シ', romaji: 'shi' }, { kana: 'ス', romaji: 'su' }, { kana: 'セ', romaji: 'se' }, { kana: 'ソ', romaji: 'so' },{ kana: 'タ', romaji: 'ta' }, { kana: 'チ', romaji: 'chi' }, { kana: 'ツ', romaji: 'tsu' }, { kana: 'テ', romaji: 'te' }, { kana: 'ト', romaji: 'to' },{ kana: 'ナ', romaji: 'na' }, { kana: 'ニ', romaji: 'ni' }, { kana: 'ヌ', romaji: 'nu' }, { kana: 'ネ', romaji: 'ne' }, { kana: 'ノ', romaji: 'no' },{ kana: 'ハ', romaji: 'ha' }, { kana: 'ヒ', romaji: 'hi' }, { kana: 'フ', romaji: 'fu' }, { kana: 'ヘ', romaji: 'he' }, { kana: 'ホ', romaji: 'ho' },{ kana: 'マ', romaji: 'ma' }, { kana: 'ミ', romaji: 'mi' }, { kana: 'ム', romaji: 'mu' }, { kana: 'メ', romaji: 'me' }, { kana: 'モ', romaji: 'mo' },{ kana: 'ヤ', romaji: 'ya' }, { kana: 'ユ', romaji: 'yu' }, { kana: 'ヨ', romaji: 'yo' },{ kana: 'ラ', romaji: 'ra' }, { kana: 'リ', romaji: 'ri' }, { kana: 'ル', romaji: 'ru' }, { kana: 'レ', romaji: 're' }, { kana: 'ロ', romaji: 'ro' },{ kana: 'ワ', romaji: 'wa' }, { kana: 'ヲ', romaji: 'wo' }, { kana: 'ン', romaji: 'n' },{ kana: 'ガ', romaji: 'ga' }, { kana: 'ギ', romaji: 'gi' }, { kana: 'グ', romaji: 'gu' }, { kana: 'ゲ', romaji: 'ge' }, { kana: 'ゴ', romaji: 'go' },{ kana: 'ザ', romaji: 'za' }, { kana: 'ジ', romaji: 'ji' }, { kana: 'ズ', romaji: 'zu' }, { kana: 'ゼ', romaji: 'ze' }, { kana: 'ゾ', romaji: 'zo' },{ kana: 'ダ', romaji: 'da' }, { kana: 'ヂ', romaji: 'ji' }, { kana: 'ヅ', romaji: 'zu' }, { kana: 'デ', romaji: 'de' }, { kana: 'ド', romaji: 'do' },{ kana: 'バ', romaji: 'ba' }, { kana: 'ビ', romaji: 'bi' }, { kana: 'ブ', romaji: 'bu' }, { kana: 'ベ', romaji: 'be' }, { kana: 'ボ', romaji: 'bo' },{ kana: 'パ', romaji: 'pa' }, { kana: 'ピ', romaji: 'pi' }, { kana: 'プ', romaji: 'pu' }, { kana: 'ペ', romaji: 'pe' }, { kana: 'ポ', romaji: 'po' }], yoon: [ { kana: 'きゃ', romaji: 'kya' }, { kana: 'きゅ', romaji: 'kyu' }, { kana: 'きょ', romaji: 'kyo' }, { kana: 'ぎゃ', romaji: 'gya' }, { kana: 'ぎゅ', romaji: 'gyu' }, { kana: 'ぎょ', romaji: 'gyo' }, { kana: 'しゃ', romaji: 'sha' }, { kana: 'しゅ', romaji: 'shu' }, { kana: 'しょ', romaji: 'sho' }, { kana: 'じゃ', romaji: 'ja' }, { kana: 'じゅ', romaji: 'ju' }, { kana: 'じょ', romaji: 'jo' }, { kana: 'ちゃ', romaji: 'cha' }, { kana: 'ちゅ', romaji: 'chu' }, { kana: 'ちょ', romaji: 'cho' }, { kana: 'にゃ', romaji: 'nya' }, { kana: 'にゅ', romaji: 'nyu' }, { kana: 'にょ', romaji: 'nyo' }, { kana: 'ひゃ', romaji: 'hya' }, { kana: 'ひゅ', romaji: 'hyu' }, { kana: 'ひょ', romaji: 'hyo' }, { kana: 'びゃ', romaji: 'bya' }, { kana: 'びゅ', romaji: 'byu' }, { kana: 'びょ', romaji: 'byo' }, { kana: 'ぴゃ', romaji: 'pya' }, { kana: 'ぴゅ', romaji: 'pyu' }, { kana: 'ぴょ', romaji: 'pyo' }, { kana: 'みゃ', romaji: 'mya' }, { kana: 'みゅ', romaji: 'myu' }, { kana: 'みょ', romaji: 'myo' }, { kana: 'りゃ', romaji: 'rya' }, { kana: 'りゅ', romaji: 'ryu' }, { kana: 'りょ', romaji: 'ryo' }, { kana: 'キャ', romaji: 'kya' }, { kana: 'キュ', romaji: 'kyu' }, { kana: 'キョ', romaji: 'kyo' }, { kana: 'ギャ', romaji: 'gya' }, { kana: 'ギュ', romaji: 'gyu' }, { kana: 'ギョ', romaji: 'gyo' }, { kana: 'シャ', romaji: 'sha' }, { kana: 'シュ', romaji: 'shu' }, { kana: 'ショ', romaji: 'sho' }, { kana: 'ジャ', romaji: 'ja' }, { kana: 'ジュ', romaji: 'ju' }, { kana: 'ジョ', romaji: 'jo' }, { kana: 'チャ', romaji: 'cha' }, { kana: 'チュ', romaji: 'chu' }, { kana: 'チョ', romaji: 'cho' }, { kana: 'ニャ', romaji: 'nya' }, { kana: 'ニュ', romaji: 'nyu' }, { kana: 'ニョ', romaji: 'nyo' }, { kana: 'ヒャ', romaji: 'hya' }, { kana: 'ヒュ', romaji: 'hyu' }, { kana: 'ヒョ', romaji: 'hyo' }, { kana: 'ビャ', romaji: 'bya' }, { kana: 'ビュ', romaji: 'byu' }, { kana: 'ビョ', romaji: 'byo' }, { kana: 'ピャ', romaji: 'pya' }, { kana: 'ピュ', romaji: 'pyu' }, { kana: 'ピョ', romaji: 'pyo' }, { kana: 'ミャ', romaji: 'mya' }, { kana: 'ミュ', romaji: 'myu' }, { kana: 'ミョ', romaji: 'myo' }, { kana: 'リャ', romaji: 'rya' }, { kana: 'リュ', romaji: 'ryu' }, { kana: 'リョ', romaji: 'ryo' }] };
+        const ALL_KANA = [...KANA_DATA.hiragana, ...KANA_DATA.katakana, ...KANA_DATA.yoon];
+        const dom = {
+            body: document.body, bgCanvas: document.getElementById('background-canvas'),
+            screensWrapper: document.getElementById('screens-wrapper'),
+            screens: { setup: document.getElementById('setup-screen'), game: document.getElementById('game-screen'), results: document.getElementById('results-screen') },
+            setupMessage: document.getElementById('setup-message'),
+            charContainers: { hiragana: document.getElementById('hiragana-chars'), katakana: document.getElementById('katakana-chars'), yoon: document.getElementById('yoon-chars') },
+            tabs: { hiragana: document.getElementById('tab-hiragana'), katakana: document.getElementById('tab-katakana'), yoon: document.getElementById('tab-yoon') },
+            questionDisplay: document.getElementById('question-display'), answerOptionsContainer: document.getElementById('answer-options'), typingContainer: document.getElementById('typing-container'),
+            typingInput: document.getElementById('typing-input'), feedback: document.getElementById('feedback'), finalScore: document.getElementById('final-score'), mistakesList: document.getElementById('mistakes-list'),
+            themeSwitcher: document.getElementById('theme-switcher'), gameModeSlider: document.getElementById('game-mode-slider'),
+            progress: { text: document.getElementById('progress-text'), bar: document.getElementById('progress-bar'), score: document.getElementById('score') },
+            stats: { avgTime: document.getElementById('avg-time'), nemesisKana: document.getElementById('nemesis-kana') }
+        };
+        let state = { gameMode: 'classic', questionQueue: [], currentQuestion: null, score: 0, questionsAsked: 0, mistakes: [], currentTheme: 'wano', masteryData: {}, questionStartTime: 0, totalResponseTime: 0, currentScreen: 'setup' };
+        let synth, bgAnimationId;
+        const bgCtx = dom.bgCanvas.getContext('2d');
+        let particles = [];
+        
+        function resizeCanvas() { dom.bgCanvas.width = window.innerWidth; dom.bgCanvas.height = window.innerHeight; }
+        function createParticles() {
+            particles = []; 
+            const particleCount = 40;
+            for(let i=0; i < particleCount; i++) { 
+                particles.push({ 
+                    x: Math.random() * dom.bgCanvas.width, 
+                    y: Math.random() * dom.bgCanvas.height, 
+                    vx: (Math.random() - 0.5) * 0.3, 
+                    vy: Math.random() * 0.4 + 0.2,
+                    size: Math.random() * 20 + 15, 
+                    angle: Math.random() * Math.PI * 2, 
+                    char: '🌸' 
+                }); 
+            }
+        }
+        function animateBackground() {
+            bgCtx.clearRect(0, 0, dom.bgCanvas.width, dom.bgCanvas.height);
+            if (state.currentTheme === 'wano') {
+                 particles.forEach(p => {
+                    p.y -= p.vy; 
+                    p.x += Math.sin(p.y * 0.02) * 0.3; 
+                    if (p.y < -p.size * 1.5) {
+                        p.y = dom.bgCanvas.height + p.size * 1.5;
+                        p.x = Math.random() * dom.bgCanvas.width;
+                    }
+                    bgCtx.fillStyle = `rgba(249, 217, 35, 0.4)`;
+                    bgCtx.shadowColor = `rgba(249, 217, 35, 0.8)`;
+                    bgCtx.shadowBlur = 15;
+                    bgCtx.beginPath();
+                    bgCtx.roundRect(p.x, p.y, p.size, p.size * 1.5, p.size / 3);
+                    bgCtx.fill();
+                    bgCtx.shadowBlur = 0;
+                 });
+            } else if (state.currentTheme === 'drum') {
+                bgCtx.font = '20px serif';
+                bgCtx.fillStyle = 'rgba(236, 72, 153, 0.7)';
+                particles.forEach(p => {
+                    p.x += p.vx; p.y += p.vy + 0.5;
+                    if (p.y > dom.bgCanvas.height) { p.x = Math.random() * dom.bgCanvas.width; p.y = -20; }
+                    bgCtx.fillText(p.char, p.x, p.y);
+                });
+            } else if (state.currentTheme === 'sunny') {
+                 particles.forEach(p => {
+                    p.y += p.vy * 0.2; 
+                     p.x += Math.sin(p.y * 0.1) * 0.2; 
+                    if (p.y > dom.bgCanvas.height + p.size) {
+                        p.y = -p.size;
+                        p.x = Math.random() * dom.bgCanvas.width;
+                    }
+                    bgCtx.fillStyle = '#854d0e'; 
+                    bgCtx.fillRect(p.x, p.y, 5, p.size);
+                    bgCtx.fillStyle = 'rgba(22, 163, 74, 0.7)';
+                    bgCtx.beginPath();
+                    bgCtx.arc(p.x + 2.5, p.y, p.size / 1.5, 0, Math.PI * 2);
+                    bgCtx.fill();
+                    bgCtx.fillStyle = `rgba(249, 115, 22, 0.9)`;
+                    for(let i = 0; i < 3; i++) {
+                        bgCtx.beginPath();
+                        bgCtx.arc(p.x + 2.5 + (Math.random() - 0.5) * p.size, p.y - (Math.random() * p.size / 2), 3, 0, Math.PI * 2);
+                        bgCtx.fill();
+                    }
+                 });
+            }
+            bgAnimationId = requestAnimationFrame(animateBackground);
+        }
+        function initBackground() { if (bgAnimationId) cancelAnimationFrame(bgAnimationId); resizeCanvas(); createParticles(); animateBackground(); }
+        function initAudio() { if (!synth) synth = new Tone.Synth().toDestination(); }
+        
+        function switchScreen(screenToShow, direction = 'forward') {
+            const currentScreenEl = dom.screens[state.currentScreen];
+            const nextScreenEl = dom.screens[screenToShow];
+            Object.values(dom.screens).forEach(screen => { if(screen !== currentScreenEl) { screen.classList.add('hidden', direction === 'forward' ? 'right' : 'left'); } });
+            currentScreenEl.classList.add('hidden', direction === 'forward' ? 'left' : 'right');
+            nextScreenEl.classList.remove('hidden', 'left', 'right');
+            state.currentScreen = screenToShow;
+            setTimeout(() => {
+                const activeScreen = dom.screens[screenToShow];
+                dom.screensWrapper.style.height = `${activeScreen.offsetHeight}px`;
+            }, 50);
+        }
+
+        function switchTab(tabToShow) { Object.keys(dom.tabs).forEach(key => { const tabEl = dom.tabs[key], gridEl = document.getElementById(`${key}-grid`); if (key === tabToShow) { tabEl.classList.add('border-[var(--accent-primary)]', 'text-[var(--accent-primary)]', 'border-b-2'); gridEl.classList.remove('hidden'); } else { tabEl.classList.remove('border-[var(--accent-primary)]', 'text-[var(--accent-primary)]', 'border-b-2'); gridEl.classList.add('hidden'); } }); }
+        function toggleAll(kanaType, select) { dom.charContainers[kanaType].querySelectorAll('.kana-btn-wrapper').forEach(wrapper => { if (select) { wrapper.classList.add('selected'); } else { wrapper.classList.remove('selected'); } }); }
+        function setTheme(themeName) {
+            dom.body.className = `theme-${themeName} bg-[var(--bg-primary)] text-[var(--text-primary)]`;
+            state.currentTheme = themeName;
+            dom.themeSwitcher.querySelectorAll('button').forEach(btn => { btn.classList.toggle('active', btn.dataset.theme === themeName); });
+            initBackground(); saveData();
+        }
+        function saveData() {
+            const selectedKanaList = [];
+            document.querySelectorAll('.kana-btn-wrapper.selected').forEach(wrapper => selectedKanaList.push(wrapper.dataset.kana));
+            const settings = { gameMode: document.querySelector('input[name="game-mode"]:checked').value, selectedKana: selectedKanaList, theme: state.currentTheme, mastery: state.masteryData };
+            localStorage.setItem('iskraSettings', JSON.stringify(settings));
+        }
+        function loadData() {
+            const settings = JSON.parse(localStorage.getItem('iskraSettings'));
+            if (!settings) { setTheme('wano'); } else { setTheme(settings.theme || 'wano'); }
+            state.masteryData = settings?.mastery || {};
+            if (settings?.gameMode) { const modeInput = document.getElementById(`mode-${settings.gameMode}`); if (modeInput) modeInput.checked = true; }
+            if (settings?.selectedKana && Array.isArray(settings.selectedKana)) { settings.selectedKana.forEach(kanaChar => { const wrapper = document.querySelector(`.kana-btn-wrapper[data-kana="${kanaChar}"]`); if (wrapper) wrapper.classList.add('selected'); }); }
+            updateAllMasteryIndicators();
+            updateGameModeSlider();
+            switchScreen(state.currentScreen); 
+        }
+        function startGame() {
+            initAudio(); Tone.start();
+            state.gameMode = document.querySelector('input[name="game-mode"]:checked').value;
+            let selectedKana = [];
+            document.querySelectorAll('.kana-btn-wrapper.selected').forEach(wrapper => { selectedKana.push({ kana: wrapper.dataset.kana, romaji: wrapper.dataset.romaji }); });
+            if (selectedKana.length < 4) { dom.setupMessage.textContent = 'Wybierz co najmniej 4 znaki!'; return; }
+            saveData(); dom.setupMessage.textContent = '';
+            state.questionQueue = [...selectedKana].sort(() => Math.random() - 0.5);
+            state.score = 0; state.questionsAsked = 0; state.mistakes = []; state.totalResponseTime = 0;
+            switchScreen('game', 'forward'); updateUiOnNextQuestion(); generateQuestion();
+        }
+        function generateQuestion() {
+            if (state.questionsAsked >= state.questionQueue.length) { showResults(); return; }
+            dom.feedback.textContent = '';
+            state.currentQuestion = state.questionQueue[state.questionsAsked]; state.questionStartTime = Date.now();
+            let currentMode = state.gameMode;
+            if (currentMode === 'challenge') { currentMode = ['classic', 'reverse', 'typing'][Math.floor(Math.random() * 3)]; }
+            dom.questionDisplay.classList.remove('romaji-question', 'kana-font');
+            dom.answerOptionsContainer.classList.add('hidden'); dom.typingContainer.classList.add('hidden');
+            if (currentMode === 'classic' || currentMode === 'reverse') { dom.answerOptionsContainer.classList.remove('hidden'); generateMultipleChoiceQuestion(currentMode); } 
+            else { dom.typingContainer.classList.remove('hidden'); generateTypingQuestion(); }
+        }
+        function generateMultipleChoiceQuestion(mode) {
+            let options, correctAnswer;
+            if (mode === 'classic') {
+                dom.questionDisplay.textContent = state.currentQuestion.kana; dom.questionDisplay.classList.add('kana-font');
+                correctAnswer = state.currentQuestion.romaji; options = [correctAnswer];
+                while (options.length < 4) { const randomKana = ALL_KANA[Math.floor(Math.random() * ALL_KANA.length)]; if (!options.includes(randomKana.romaji)) { options.push(randomKana.romaji); } }
+            } else {
+                dom.questionDisplay.textContent = state.currentQuestion.romaji; dom.questionDisplay.classList.add('romaji-question');
+                correctAnswer = state.currentQuestion.kana; options = [correctAnswer];
+                while (options.length < 4) { const randomKana = ALL_KANA[Math.floor(Math.random() * ALL_KANA.length)]; if (!options.includes(randomKana.kana)) { options.push(randomKana.kana); } }
+            }
+            dom.answerOptionsContainer.innerHTML = '';
+            options.sort(() => Math.random() - 0.5).forEach(option => {
+                const button = document.createElement('button'); button.textContent = option;
+                if (mode === 'reverse') { button.classList.add('kana-font'); }
+                button.className = 'answer-btn bg-[var(--bg-tertiary)] hover:opacity-80 p-4 rounded-lg text-lg font-semibold transition-all duration-200 active:scale-95';
+                button.onclick = () => checkAnswer(option, button, correctAnswer);
+                dom.answerOptionsContainer.appendChild(button);
+            });
+        }
+        function generateTypingQuestion() {
+            dom.questionDisplay.textContent = state.currentQuestion.kana; dom.questionDisplay.classList.add('kana-font');
+            dom.typingInput.value = ''; dom.typingInput.focus();
+        }
+        function checkAnswer(selectedValue, button, correctAnswer) { handleAnswer(selectedValue === correctAnswer, correctAnswer, button); }
+        function checkTypingAnswer() {
+            const userAnswer = dom.typingInput.value.trim().toLowerCase(); if (userAnswer === '') return;
+            handleAnswer(userAnswer === state.currentQuestion.romaji, state.currentQuestion.romaji, null);
+        }
+        function handleAnswer(isCorrect, correctAnswer, buttonElement) {
+            state.totalResponseTime += Date.now() - state.questionStartTime;
+            let currentMode = state.gameMode;
+            if (currentMode === 'challenge' && dom.typingContainer.classList.contains('hidden')) { currentMode = 'multiple-choice'; } 
+            else if (currentMode === 'challenge') { currentMode = 'typing'; }
+            if(currentMode !== 'typing') dom.answerOptionsContainer.querySelectorAll('button').forEach(btn => btn.disabled = true); else dom.typingInput.disabled = true;
+            updateMastery(state.currentQuestion.kana, isCorrect);
+            if (isCorrect) {
+                state.score++; dom.feedback.textContent = 'Dobrze!'; dom.feedback.className = 'h-8 mb-4 text-xl font-bold text-[var(--feedback-correct)] animate-pulse';
+                if(buttonElement) buttonElement.style.backgroundColor = 'var(--feedback-correct)'; if(synth) synth.triggerAttackRelease("C5", "8n");
+                const don = document.createElement('div');
+                don.id = 'don-effect'; don.textContent = 'ドン!';
+                document.getElementById('don-effect-container').appendChild(don);
+                setTimeout(()=> don.remove(), 800);
+            } else {
+                dom.feedback.innerHTML = `Źle! Poprawna odpowiedź: <span class="font-bold">${correctAnswer}</span>`; dom.feedback.className = 'h-8 mb-4 text-xl font-bold text-[var(--feedback-wrong)]';
+                dom.screens.game.classList.add('animate-shake');
+                if(buttonElement) { buttonElement.style.backgroundColor = 'var(--feedback-wrong)'; dom.answerOptionsContainer.querySelectorAll('button').forEach(btn => { if (btn.textContent === correctAnswer) { btn.style.backgroundColor = 'var(--feedback-correct)'; } }); }
+                state.mistakes.push(state.currentQuestion); if(synth) synth.triggerAttackRelease("C3", "8n");
+            }
+            state.questionsAsked++;
+            setTimeout(() => {
+                if(state.gameMode === 'typing' || currentMode === 'typing') dom.typingInput.disabled = false;
+                dom.feedback.classList.remove('animate-pulse'); dom.screens.game.classList.remove('animate-shake');
+                updateUiOnNextQuestion(); generateQuestion();
+            }, 1500);
+        }
+        function updateMastery(kana, isCorrect) {
+            let currentScore = state.masteryData[kana] || 0;
+            if (isCorrect) { currentScore = Math.min(5, currentScore + 1); } 
+            else { currentScore = Math.max(0, currentScore - 1); }
+            state.masteryData[kana] = currentScore;
+            updateMasteryIndicator(kana); saveData();
+        }
+        function updateMasteryIndicator(kana) {
+            const wrapper = document.querySelector(`.kana-btn-wrapper[data-kana="${kana}"]`); if (!wrapper) return;
+            const indicator = wrapper.querySelector('.mastery-indicator'); if (!indicator) return;
+            const score = state.masteryData[kana] || 0;
+            let icon = '';
+            if (score > 0 && score < 5) {
+                const color = (score < 3) ? `var(--mastery-lvl1)` : `var(--mastery-lvl3)`;
+                icon = `<svg viewBox="0 0 24 24" fill="${color}"><path d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M12,14c-1.1,0-2-0.9-2-2s0.9-2,2-2s2,0.9,2,2 S13.1,14,12,14z"/><text x="50%" y="65%" dominant-baseline="middle" text-anchor="middle" font-size="8" fill="var(--bg-secondary)">B</text></svg>`;
+            } else if (score === 5) {
+                icon = `<svg viewBox="0 0 24 24" fill="var(--mastery-lvl5)"><path d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M12,5c-3.86,0-7,3.14-7,7h2c0-2.76,2.24-5,5-5s5,2.24,5,5h2C19,8.14,15.86,5,12,5z"/><rect x="8" y="4" width="8" height="2" rx="1" fill="var(--mastery-lvl1)"/></svg>`;
+                indicator.style.transform = 'scale(1.25)';
+                indicator.style.filter = 'drop-shadow(0 0 3px var(--mastery-border))';
+            } else { indicator.style.transform = 'scale(1)'; indicator.style.filter = 'none'; }
+            indicator.innerHTML = icon;
+        }
+        function updateAllMasteryIndicators() { ALL_KANA.forEach(item => updateMasteryIndicator(item.kana)); }
+        function updateUiOnNextQuestion() {
+            dom.progress.score.textContent = `Wynik: ${state.score}`;
+            const totalQuestions = state.questionQueue.length;
+            dom.progress.text.textContent = `Pytanie: ${Math.min(state.questionsAsked + 1, totalQuestions)} / ${totalQuestions}`;
+            const scorePercent = state.questionsAsked > 0 ? (state.score / state.questionsAsked) * 100 : 100;
+            if (scorePercent >= 80) dom.progress.bar.style.backgroundColor = 'var(--progress-bar-perfect)';
+            else if (scorePercent >= 50) dom.progress.bar.style.backgroundColor = 'var(--progress-bar-good)';
+            else dom.progress.bar.style.backgroundColor = 'var(--progress-bar-bad)';
+        }
+        function showResults() {
+            switchScreen('results', 'forward'); 
+            dom.finalScore.textContent = `${state.score} / ${state.questionQueue.length}`;
+            const avgTime = state.questionsAsked > 0 ? (state.totalResponseTime / state.questionsAsked / 1000).toFixed(2) : 0;
+            dom.stats.avgTime.textContent = `${avgTime}s`;
+            if (state.mistakes.length > 0) {
+                const mistakeCounts = state.mistakes.reduce((acc, curr) => { acc[curr.kana] = (acc[curr.kana] || 0) + 1; return acc; }, {});
+                const nemesis = Object.keys(mistakeCounts).reduce((a, b) => mistakeCounts[a] > mistakeCounts[b] ? a : b);
+                dom.stats.nemesisKana.textContent = nemesis;
+            } else { dom.stats.nemesisKana.textContent = 'Brak!'; }
+            dom.mistakesList.innerHTML = '';
+            const mistakesContainer = document.getElementById('mistakes-container');
+            if (state.mistakes.length > 0) {
+                mistakesContainer.classList.remove('hidden');
+                const uniqueMistakes = [...new Map(state.mistakes.map(item => [item['kana'], item])).values()];
+                uniqueMistakes.forEach(mistake => { const el = document.createElement('span'); el.className = "bg-[var(--bg-tertiary)] rounded-md px-3 py-1 kana-font"; el.textContent = `${mistake.kana} (${mistake.romaji})`; dom.mistakesList.appendChild(el); });
+            } else { mistakesContainer.classList.add('hidden'); }
+        }
+        function updateGameModeSlider() {
+            const modes = ['classic', 'reverse', 'typing', 'challenge'];
+            const selectedRadio = document.querySelector('input[name="game-mode"]:checked') || document.getElementById('mode-classic');
+            const selectedIndex = modes.indexOf(selectedRadio.value);
+            const numModes = modes.length;
+            if (selectedIndex !== -1 && dom.gameModeSlider) {
+                dom.gameModeSlider.style.width = `${100 / numModes}%`;
+                dom.gameModeSlider.style.transform = `translateX(${selectedIndex * 100}%)`;
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            dom.screens.setup.classList.add('active');
+            Object.values(dom.screens).forEach(screen => { if (screen.id !== 'setup-screen') screen.classList.add('hidden', 'right'); });
+            Object.keys(dom.charContainers).forEach(key => renderSelectionGrid(key, dom.charContainers[key]));
+            loadData(); switchTab('hiragana');
+            Object.keys(dom.tabs).forEach(key => { dom.tabs[key].addEventListener('click', () => switchTab(key)); });
+            dom.themeSwitcher.querySelectorAll('button').forEach(btn => { btn.addEventListener('click', () => setTheme(btn.dataset.theme)); });
+            document.querySelectorAll('input[name="game-mode"]').forEach(radio => radio.addEventListener('change', updateGameModeSlider));
+            document.getElementById('start-game-btn').addEventListener('click', startGame);
+            document.getElementById('play-again-btn').addEventListener('click', () => switchScreen('setup', 'backward'));
+            document.getElementById('quit-game-btn').addEventListener('click', () => switchScreen('setup', 'backward'));
+            dom.typingInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') checkTypingAnswer()});
+            window.addEventListener('resize', resizeCanvas);
+        });
+        
+        function renderSelectionGrid(kanaType, container) {
+            container.innerHTML = '';
+            KANA_DATA[kanaType].forEach(item => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'kana-btn-wrapper relative flex flex-col items-center cursor-pointer';
+                wrapper.dataset.kana = item.kana; wrapper.dataset.romaji = item.romaji;
+                wrapper.onclick = () => wrapper.classList.toggle('selected');
+                
+                const button = document.createElement('button');
+                button.textContent = item.kana;
+                button.className = 'kana-btn w-full bg-[var(--bg-tertiary)] hover:opacity-80 rounded-lg p-2 text-xl font-bold kana-font focus:outline-none border-2 border-transparent transition-all';
+                button.style.pointerEvents = 'none';
+                
+                const indicator = document.createElement('div');
+                indicator.className = 'mastery-indicator';
+                
+                wrapper.appendChild(button);
+                wrapper.appendChild(indicator);
+                container.appendChild(wrapper);
+            });
+        }
+    </script>
+</body>
+</html>
